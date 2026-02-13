@@ -4,6 +4,18 @@ import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Bookmark } from "@/lib/types";
 
+/**
+ * Helper to safely extract hostname from a URL for favicon display.
+ * Returns empty string if URL is invalid to prevent crashes.
+ */
+function getHostname(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return "";
+  }
+}
+
 export function BookmarkList() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,32 +41,56 @@ export function BookmarkList() {
      * When another tab or device modifies bookmarks, this callback fires
      * and we update state locally — no page refresh needed.
      *
+     * RLS ensures only the current user's changes come through,
+     * but we also filter by user_id client-side as a safeguard.
+     *
      * The channel is cleaned up when the component unmounts to prevent
      * memory leaks and stale listeners.
      */
     const supabase = createClient();
-    const channel = supabase
-      .channel("bookmarks-realtime")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "bookmarks" },
-        (payload) => {
-          setBookmarks((prev) => [payload.new as Bookmark, ...prev]);
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "DELETE", schema: "public", table: "bookmarks" },
-        (payload) => {
-          setBookmarks((prev) =>
-            prev.filter((b) => b.id !== payload.old.id)
-          );
-        }
-      )
-      .subscribe();
+
+    // Get current user ID to filter realtime events
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      const userId = user?.id;
+
+      const channel = supabase
+        .channel("bookmarks-realtime")
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "bookmarks" },
+          (payload) => {
+            const newBookmark = payload.new as Bookmark;
+            // Only add if it belongs to the current user
+            if (newBookmark.user_id === userId) {
+              setBookmarks((prev) => {
+                // Avoid duplicates (e.g. if we inserted it ourselves)
+                if (prev.some((b) => b.id === newBookmark.id)) return prev;
+                return [newBookmark, ...prev];
+              });
+            }
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "DELETE", schema: "public", table: "bookmarks" },
+          (payload) => {
+            setBookmarks((prev) =>
+              prev.filter((b) => b.id !== payload.old.id)
+            );
+          }
+        )
+        .subscribe();
+
+      // Store channel reference for cleanup
+      channelRef = channel;
+    });
+
+    let channelRef: ReturnType<typeof supabase.channel> | null = null;
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channelRef) {
+        supabase.removeChannel(channelRef);
+      }
     };
   }, [fetchBookmarks]);
 
@@ -100,14 +136,16 @@ export function BookmarkList() {
         >
           <div className="flex min-w-0 flex-1 items-center gap-3">
             {/* Favicon fetched from Google's public API — no extra deps */}
-            <img
-              src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(new URL(bookmark.url).hostname)}&sz=32`}
-              alt=""
-              width={20}
-              height={20}
-              className="shrink-0 rounded"
-              loading="lazy"
-            />
+            {getHostname(bookmark.url) && (
+              <img
+                src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(getHostname(bookmark.url))}&sz=32`}
+                alt=""
+                width={20}
+                height={20}
+                className="shrink-0 rounded"
+                loading="lazy"
+              />
+            )}
             <div className="min-w-0">
               <a
                 href={bookmark.url}
@@ -122,7 +160,7 @@ export function BookmarkList() {
           </div>
           <button
             onClick={() => handleDelete(bookmark.id)}
-            className="ml-4 shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium text-muted opacity-0 transition-all group-hover:opacity-100 hover:bg-red-50 hover:text-danger focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-red-400"
+            className="ml-4 shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium text-muted transition-all sm:opacity-0 sm:group-hover:opacity-100 hover:bg-red-50 hover:text-danger focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-red-400"
             aria-label={`Delete ${bookmark.title}`}
           >
             Delete

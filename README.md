@@ -97,17 +97,35 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Problems Faced & Solutions
 
-### Auth redirects with App Router
-Supabase OAuth returns an auth code to a callback URL. We handle this in a Route Handler (`/auth/callback/route.ts`) that exchanges the code for a session and redirects to `/dashboard`. Getting the redirect flow right with the App Router required careful cookie handling in both middleware and the server client.
+### 1. Auth redirects with App Router
+**Problem:** Supabase OAuth returns an auth code to a callback URL, but the Next.js App Router doesn't have traditional API routes like the Pages Router. The auth session wasn't being set properly because cookies weren't being forwarded correctly between the middleware and server components.
 
-### Row Level Security (RLS)
-Without RLS policies, any authenticated user could read or delete anyone's bookmarks. We defined strict `select`, `insert`, and `delete` policies scoped to `auth.uid() = user_id`. The `user_id` column defaults to `auth.uid()` so the client doesn't need to send it explicitly.
+**Solution:** Created a Route Handler at `/auth/callback/route.ts` that exchanges the code for a session using `supabase.auth.exchangeCodeForSession(code)`. Added middleware (`middleware.ts`) that refreshes the auth session on every request by reading/writing cookies manually. This ensures server components always have fresh auth state.
 
-### Realtime subscriptions
-Supabase Realtime listens to Postgres changes via websockets. The key challenge is proper cleanup — if you don't remove the channel on component unmount, you get duplicate events and memory leaks. We use `supabase.removeChannel(channel)` in the effect cleanup function.
+### 2. Row Level Security (RLS) — `user_id` not being sent
+**Problem:** After enabling RLS on the `bookmarks` table, inserting a bookmark returned: `"new row violates row-level security policy for table bookmarks"`. The insert wasn't including `user_id`, so the RLS `with check (auth.uid() = user_id)` policy rejected it.
 
-### Server vs Browser Supabase clients
-Server Components can't access browser cookies directly, so we create separate clients. The server client manually reads/writes cookies via `next/headers`. The browser client uses `@supabase/ssr` which handles cookies automatically. Both share the same env vars but behave differently at runtime.
+**Solution:** Explicitly fetch the current user's ID before inserting: `const { data: { user } } = await supabase.auth.getUser()` and include `user_id: user.id` in the insert payload. Even though `auth.uid()` is available in SQL, the client-side insert must match what the policy expects.
+
+### 3. Realtime showing other users' bookmarks
+**Problem:** Supabase Realtime broadcasts all `INSERT` events on the `bookmarks` table to all connected clients. Without filtering, User A would see User B's bookmarks appear in real-time — breaking the privacy requirement.
+
+**Solution:** Added a client-side filter in the realtime callback that checks `newBookmark.user_id === currentUserId` before adding to state. Also added duplicate detection (`prev.some(b => b.id === newBookmark.id)`) to prevent the same bookmark from appearing twice when the user who inserted it receives both the local state update and the realtime event.
+
+### 4. Server vs Browser Supabase clients
+**Problem:** Using a single Supabase client for both server and client components caused auth state issues. Server Components can't access browser cookies directly, leading to "not authenticated" errors even when the user was logged in.
+
+**Solution:** Created two separate client factories: `lib/supabase/client.ts` (browser — uses `createBrowserClient` which handles cookies automatically) and `lib/supabase/server.ts` (server — uses `createServerClient` with manual cookie read/write via `next/headers`). Each request gets a fresh server client to avoid cross-request session leaks.
+
+### 5. Delete button not accessible on mobile
+**Problem:** The delete button was hidden with `opacity-0` and only appeared on hover (`group-hover:opacity-100`). Touch devices can't hover, so mobile users couldn't delete bookmarks.
+
+**Solution:** Changed to `sm:opacity-0 sm:group-hover:opacity-100` — the button is always visible on mobile screens and only uses the hover-reveal pattern on desktop. This maintains the clean desktop UI while keeping mobile fully functional.
+
+### 6. Environment variables not loading in Edge Runtime
+**Problem:** After setting up `.env.local` correctly, the middleware (which runs in Edge Runtime) threw: `"Your project's URL and Key are required to create a Supabase client!"`. The env vars weren't being picked up.
+
+**Solution:** The `.env.local` file had been accidentally emptied. Recreated it with the correct `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` values and cleared the `.next` cache directory (`rm -rf .next`) to force a fresh build that picks up the env vars.
 
 ## Deployment
 
@@ -116,6 +134,12 @@ The app is Vercel-ready. Set the environment variables in Vercel's project setti
 ```bash
 vercel
 ```
+
+**Required environment variables on Vercel:**
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+**Post-deployment:** Update the Site URL in Supabase Authentication settings to your Vercel domain, and add the Vercel domain to Google OAuth authorized JavaScript origins.
 
 ## Live URL
 

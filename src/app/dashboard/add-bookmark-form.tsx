@@ -21,9 +21,17 @@ export function AddBookmarkForm() {
     setLoading(true);
     const supabase = createClient();
 
+    // Get the current user's ID to satisfy RLS policies
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setError("You must be logged in to add bookmarks.");
+      setLoading(false);
+      return;
+    }
+
     const { error: insertError } = await supabase
       .from("bookmarks")
-      .insert({ url: url.trim(), title: title.trim() });
+      .insert({ url: url.trim(), title: title.trim(), user_id: user.id });
 
     setLoading(false);
 
