@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { LogoutButton } from "./logout-button";
-import { AddBookmarkForm } from "./add-bookmark-form";
-import { BookmarkList } from "./bookmark-list";
+import { BookmarkManager } from "./bookmark-manager";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -23,9 +22,8 @@ export default async function DashboardPage() {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
-        <AddBookmarkForm />
-        <BookmarkList />
+      <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
+        <BookmarkManager />
       </main>
     </div>
   );
