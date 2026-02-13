@@ -143,7 +143,7 @@ vercel
 
 ## Live URL
 
-> smart-bookmark-app-blond-xi.vercel.app
+> https://smart-bookmark-app-blond-xi.vercel.app/
 
 ## Repository
 
