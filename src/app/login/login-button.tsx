@@ -16,7 +16,7 @@ export function LoginButton() {
   return (
     <button
       onClick={handleLogin}
-      className="flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-white px-4 py-3 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-card focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+      className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-white px-4 py-3 text-sm font-medium text-foreground shadow-sm transition-all hover:border-muted hover:shadow-md active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
     >
       <svg className="h-5 w-5" viewBox="0 0 24 24">
         <path

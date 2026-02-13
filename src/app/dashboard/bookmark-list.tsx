@@ -72,38 +72,46 @@ export function BookmarkList() {
   };
 
   if (loading) {
-    return <p className="text-sm text-muted">Loading bookmarks...</p>;
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
   }
 
   if (bookmarks.length === 0) {
     return (
-      <div className="rounded-lg border border-border p-8 text-center">
-        <p className="text-muted">No bookmarks yet. Add one above!</p>
+      <div className="rounded-2xl border border-dashed border-border bg-card p-12 text-center">
+        <svg className="mx-auto h-10 w-10 text-muted/40" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0z" />
+        </svg>
+        <p className="mt-3 text-sm font-medium text-muted">No bookmarks yet</p>
+        <p className="mt-1 text-xs text-muted/60">Add your first bookmark above to get started.</p>
       </div>
     );
   }
 
   return (
-    <ul className="space-y-3">
+    <ul className="space-y-2">
       {bookmarks.map((bookmark) => (
         <li
           key={bookmark.id}
-          className="flex items-start justify-between rounded-lg border border-border p-4 transition-colors hover:bg-card"
+          className="group flex items-center justify-between rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:border-muted hover:shadow-md"
         >
           <div className="min-w-0 flex-1">
             <a
               href={bookmark.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-medium text-primary hover:underline"
+              className="text-sm font-semibold text-foreground transition-colors hover:text-primary"
             >
               {bookmark.title}
             </a>
-            <p className="mt-1 truncate text-sm text-muted">{bookmark.url}</p>
+            <p className="mt-0.5 truncate text-xs text-muted">{bookmark.url}</p>
           </div>
           <button
             onClick={() => handleDelete(bookmark.id)}
-            className="ml-4 shrink-0 rounded-md px-2 py-1 text-sm text-muted transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-400"
+            className="ml-4 shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium text-muted opacity-0 transition-all group-hover:opacity-100 hover:bg-red-50 hover:text-danger focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-red-400"
             aria-label={`Delete ${bookmark.title}`}
           >
             Delete
