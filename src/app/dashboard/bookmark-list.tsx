@@ -98,16 +98,27 @@ export function BookmarkList() {
           key={bookmark.id}
           className="group flex items-center justify-between rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:border-muted hover:shadow-md"
         >
-          <div className="min-w-0 flex-1">
-            <a
-              href={bookmark.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm font-semibold text-foreground transition-colors hover:text-primary"
-            >
-              {bookmark.title}
-            </a>
-            <p className="mt-0.5 truncate text-xs text-muted">{bookmark.url}</p>
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            {/* Favicon fetched from Google's public API — no extra deps */}
+            <img
+              src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(new URL(bookmark.url).hostname)}&sz=32`}
+              alt=""
+              width={20}
+              height={20}
+              className="shrink-0 rounded"
+              loading="lazy"
+            />
+            <div className="min-w-0">
+              <a
+                href={bookmark.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-semibold text-foreground transition-colors hover:text-primary"
+              >
+                {bookmark.title}
+              </a>
+              <p className="mt-0.5 truncate text-xs text-muted">{bookmark.url}</p>
+            </div>
           </div>
           <button
             onClick={() => handleDelete(bookmark.id)}
