@@ -143,12 +143,10 @@ vercel
 
 ## Live URL
 
-> _Coming soon_
+> smart-bookmark-app-blond-xi.vercel.app
 
 ## Repository
 
-> [GitHub](https://github.com/your-username/smart-bookmark-app)
+> https://github.com/grafenx07/smart-bookmark-app
 
-## License
 
-MIT
