@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 /**
  * Middleware refreshes the Supabase auth session on every request
  * so that server components always have fresh auth state.
+ * It also redirects unauthenticated users away from protected routes.
  */
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -30,7 +31,16 @@ export async function middleware(request: NextRequest) {
   );
 
   // Refresh the session — this keeps the auth cookie alive
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Protect /dashboard routes — redirect to /login if unauthenticated
+  if (!user && request.nextUrl.pathname.startsWith("/dashboard")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
 
   return supabaseResponse;
 }
