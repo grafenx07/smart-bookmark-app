@@ -58,6 +58,19 @@ export function BookmarkList() {
     };
   }, [fetchBookmarks]);
 
+  const handleDelete = async (id: string) => {
+    // Optimistic update: remove from UI immediately
+    setBookmarks((prev) => prev.filter((b) => b.id !== id));
+
+    const supabase = createClient();
+    const { error } = await supabase.from("bookmarks").delete().eq("id", id);
+
+    if (error) {
+      // If the delete failed, re-fetch to restore the correct state
+      fetchBookmarks();
+    }
+  };
+
   if (loading) {
     return <p className="text-sm text-muted">Loading bookmarks...</p>;
   }
@@ -75,17 +88,26 @@ export function BookmarkList() {
       {bookmarks.map((bookmark) => (
         <li
           key={bookmark.id}
-          className="rounded-lg border border-border p-4 transition-colors hover:bg-card"
+          className="flex items-start justify-between rounded-lg border border-border p-4 transition-colors hover:bg-card"
         >
-          <a
-            href={bookmark.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium text-primary hover:underline"
+          <div className="min-w-0 flex-1">
+            <a
+              href={bookmark.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-primary hover:underline"
+            >
+              {bookmark.title}
+            </a>
+            <p className="mt-1 truncate text-sm text-muted">{bookmark.url}</p>
+          </div>
+          <button
+            onClick={() => handleDelete(bookmark.id)}
+            className="ml-4 shrink-0 rounded-md px-2 py-1 text-sm text-muted transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-400"
+            aria-label={`Delete ${bookmark.title}`}
           >
-            {bookmark.title}
-          </a>
-          <p className="mt-1 truncate text-sm text-muted">{bookmark.url}</p>
+            Delete
+          </button>
         </li>
       ))}
     </ul>
