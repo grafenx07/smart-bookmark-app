@@ -28,7 +28,7 @@ A clean, real-time bookmark manager built with Next.js and Supabase. Save links,
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/your-username/smart-bookmark-app.git
+git clone https://github.com/grafenx07/smart-bookmark-app.git
 cd smart-bookmark-app
 npm install
 ```
